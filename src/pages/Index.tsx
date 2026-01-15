@@ -1,4 +1,7 @@
 import { motion } from "framer-motion";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { HowItWorks } from "@/components/home/HowItWorks";
 import { StoryInput } from "@/components/comic/StoryInput";
 import { LoadingAnimation } from "@/components/comic/LoadingAnimation";
 import { ComicViewer } from "@/components/comic/ComicViewer";
@@ -8,15 +11,17 @@ const Index = () => {
   const { isLoading, loadingStep, comic, generateComic, reset } = useComicGenerator();
 
   return (
-    <div className="min-h-screen bg-comic-cream overflow-hidden">
+    <div className="min-h-screen bg-comic-cream flex flex-col">
+      <Navbar />
+
       {/* Decorative background elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
         <div className="absolute -top-20 -left-20 w-64 h-64 bg-comic-yellow/30 rounded-full blur-3xl" />
         <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-comic-blue/20 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/4 w-40 h-40 bg-comic-red/10 rounded-full blur-2xl" />
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-8">
+      <main className="flex-1 relative z-10 container mx-auto px-4 py-8">
         {/* Header */}
         <motion.header
           initial={{ y: -50, opacity: 0 }}
@@ -37,12 +42,12 @@ const Index = () => {
             </h1>
           </motion.div>
           <p className="text-xl text-comic-text/70 font-medium max-w-xl mx-auto">
-            Turn your wildest ideas into hilarious 4-panel comic strips! Just describe your story and watch the magic happen.
+            Turn your wildest ideas into hilarious 9-panel comic strips! Just describe your story and watch the magic happen.
           </p>
         </motion.header>
 
         {/* Main content */}
-        <main className="relative">
+        <section className="relative">
           {!comic && !isLoading && (
             <StoryInput onSubmit={generateComic} isLoading={isLoading} />
           )}
@@ -57,18 +62,13 @@ const Index = () => {
               onReset={reset} 
             />
           )}
-        </main>
+        </section>
 
-        {/* Footer */}
-        <motion.footer
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          className="text-center mt-16 text-comic-text/50 text-sm"
-        >
-          <p>Made with 💥 POW 💥 and AI magic</p>
-        </motion.footer>
-      </div>
+        {/* How It Works - only show when not generating or viewing */}
+        {!comic && !isLoading && <HowItWorks />}
+      </main>
+
+      <Footer />
     </div>
   );
 };

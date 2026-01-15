@@ -14,16 +14,190 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          stripe_payment_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          stripe_payment_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          stripe_payment_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          credits: number
+          email: string
+          id: string
+          stripe_customer_id: string | null
+          subscription_status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credits?: number
+          email: string
+          id: string
+          stripe_customer_id?: string | null
+          subscription_status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          email?: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscription_status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sample_comics: {
+        Row: {
+          character_description: string | null
+          cover_image_url: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          panels: Json
+          story_prompt: string | null
+          theme: string
+          title: string
+        }
+        Insert: {
+          character_description?: string | null
+          cover_image_url: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          panels: Json
+          story_prompt?: string | null
+          theme: string
+          title: string
+        }
+        Update: {
+          character_description?: string | null
+          cover_image_url?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          panels?: Json
+          story_prompt?: string | null
+          theme?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      user_comics: {
+        Row: {
+          cover_image_url: string
+          created_at: string
+          id: string
+          panels: Json
+          recipient: string | null
+          theme: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          cover_image_url: string
+          created_at?: string
+          id?: string
+          panels: Json
+          recipient?: string | null
+          theme?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          cover_image_url?: string
+          created_at?: string
+          id?: string
+          panels?: Json
+          recipient?: string | null
+          theme?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_comics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +324,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
