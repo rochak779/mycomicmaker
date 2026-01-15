@@ -46,24 +46,30 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a hilarious comic strip writer. Your job is to take a brief story idea and expand it into exactly 4 funny comic panels.
+            content: `You are a hilarious comic strip writer. Your job is to take a brief story idea and expand it into exactly 9 funny comic panels plus a cover image.
 
 Theme: ${themeContext}
 ${recipientContext}
 ${characterImageContext}
+
+You must create:
+1. A catchy comic TITLE
+2. A COVER IMAGE description (a dramatic/funny scene that captures the essence of the story)
+3. NINE (9) comic panels that tell the complete story
 
 For each panel, provide:
 1. A visual description (what's happening in the scene, character expressions, actions)
 2. Dialogue or caption (funny speech bubbles or narrator text)
 3. A sound effect if applicable (like "CRASH!", "SPLAT!", "ZOOM!")
 
-Make it FUNNY! Use visual gags, exaggerated expressions, unexpected twists, and punchy dialogue.
+Make it FUNNY! Use visual gags, exaggerated expressions, unexpected twists, and punchy dialogue. Build up the story across all 9 panels with a satisfying punchline at the end.
 
 ${characterDescription ? `Main character description: ${characterDescription}` : ""}
 
 Respond in this exact JSON format:
 {
   "title": "Comic Title Here",
+  "coverDescription": "A dramatic scene description for the title page thumbnail",
   "panels": [
     {
       "panelNumber": 1,
@@ -71,13 +77,13 @@ Respond in this exact JSON format:
       "dialogue": "Character dialogue or narration",
       "soundEffect": "OPTIONAL sound effect or null"
     },
-    // ... 4 panels total
+    // ... 9 panels total
   ]
 }`
           },
           {
             role: "user",
-            content: `Create a 4-panel funny comic based on this story: "${story}"`
+            content: `Create a 9-panel funny comic based on this story: "${story}"`
           }
         ],
         response_format: { type: "json_object" }
@@ -108,7 +114,33 @@ Respond in this exact JSON format:
     
     console.log("Generated comic script:", comicScript.title);
 
-    // Step 2: Generate images for each panel
+    // Step 2: Generate cover image first
+    console.log("Generating cover image...");
+    const coverPrompt = `Cartoon comic cover art style, bright colors, bold outlines, dramatic composition, expressive characters. ${comicScript.coverDescription}. ${characterDescription ? `Character: ${characterDescription}` : ""} Style: Classic comic book cover, vibrant and eye-catching, suitable for a title page.`;
+    
+    const coverResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [{ role: "user", content: coverPrompt }],
+        modalities: ["image", "text"]
+      }),
+    });
+
+    let coverImageUrl = "";
+    if (coverResponse.ok) {
+      const coverData = await coverResponse.json();
+      coverImageUrl = coverData.choices?.[0]?.message?.images?.[0]?.image_url?.url || "";
+      console.log("Cover image generated successfully");
+    } else {
+      console.error("Cover image generation failed:", await coverResponse.text());
+    }
+
+    // Step 3: Generate images for each panel
     const panelImages: string[] = [];
     
     for (let i = 0; i < comicScript.panels.length; i++) {
@@ -163,6 +195,7 @@ Respond in this exact JSON format:
 
     const result = {
       title: comicScript.title,
+      coverImageUrl,
       panels: comicScript.panels.map((panel: any, index: number) => ({
         ...panel,
         imageUrl: panelImages[index] || ""

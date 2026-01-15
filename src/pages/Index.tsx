@@ -50,7 +50,12 @@ const Index = () => {
           {isLoading && <LoadingAnimation currentStep={loadingStep} />}
 
           {comic && !isLoading && (
-            <ComicViewer title={comic.title} panels={comic.panels} onReset={reset} />
+            <ComicViewer 
+              title={comic.title} 
+              coverImageUrl={comic.coverImageUrl}
+              panels={comic.panels} 
+              onReset={reset} 
+            />
           )}
         </main>
 
