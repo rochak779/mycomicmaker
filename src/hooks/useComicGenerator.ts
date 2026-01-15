@@ -19,7 +19,13 @@ export const useComicGenerator = () => {
   const [loadingStep, setLoadingStep] = useState(0);
   const [comic, setComic] = useState<ComicResult | null>(null);
 
-  const generateComic = async (story: string, characterDescription: string) => {
+  const generateComic = async (
+    story: string,
+    characterDescription: string,
+    theme: string,
+    recipient: string,
+    characterImages: string[]
+  ) => {
     setIsLoading(true);
     setLoadingStep(0);
     setComic(null);
@@ -38,7 +44,7 @@ export const useComicGenerator = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ story, characterDescription }),
+          body: JSON.stringify({ story, characterDescription, theme, recipient, characterImages }),
         }
       );
 
