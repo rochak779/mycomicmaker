@@ -11,14 +11,28 @@ serve(async (req) => {
   }
 
   try {
-    const { story, characterDescription } = await req.json();
+    const { story, characterDescription, theme, recipient, characterImages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating comic for story:", story);
+    console.log("Generating comic for story:", story, "Theme:", theme, "For:", recipient);
+
+    // Build context from inputs
+    const themeMap: Record<string, string> = {
+      "love-story": "romantic, sweet, heartwarming moments with comedic twists",
+      "birthday": "celebration, party, surprises, cake, and birthday shenanigans",
+      "friends-family": "friendship, family bonds, silly moments together",
+      "freestyle": "anything goes, pure comedy and creativity"
+    };
+    const themeContext = themeMap[theme as string] || "funny and entertaining";
+
+    const recipientContext = recipient ? `This comic is specially made for ${recipient}. Include references or personalization for them.` : "";
+    const characterImageContext = characterImages && characterImages.length > 0 
+      ? `Reference images have been provided for the characters. Use these as visual inspiration for consistent character appearance.`
+      : "";
 
     // Step 1: Expand story into 4 panels with dialogue
     const storyResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -33,6 +47,10 @@ serve(async (req) => {
           {
             role: "system",
             content: `You are a hilarious comic strip writer. Your job is to take a brief story idea and expand it into exactly 4 funny comic panels.
+
+Theme: ${themeContext}
+${recipientContext}
+${characterImageContext}
 
 For each panel, provide:
 1. A visual description (what's happening in the scene, character expressions, actions)
