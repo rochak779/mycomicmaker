@@ -11,6 +11,7 @@ interface Panel {
 
 interface ComicResult {
   title: string;
+  coverImageUrl: string;
   panels: Panel[];
 }
 
