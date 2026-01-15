@@ -57,6 +57,15 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Comic-specific colors
+        comic: {
+          red: "hsl(var(--comic-red))",
+          blue: "hsl(var(--comic-blue))",
+          yellow: "hsl(var(--comic-yellow))",
+          green: "hsl(var(--comic-green))",
+          text: "hsl(var(--comic-text))",
+          cream: "hsl(var(--comic-cream))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
