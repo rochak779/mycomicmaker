@@ -15,18 +15,27 @@ const Pricing = () => {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const handleCheckout = async (productType: "credits" | "subscription") => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      console.log("User not authenticated, cannot checkout");
+      return;
+    }
     
+    console.log("Starting checkout for:", productType);
     setLoadingPlan(productType);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { product_type: productType },
       });
 
+      console.log("Checkout response:", data, error);
+
       if (error) throw error;
 
       if (data?.url) {
-        window.open(data.url, "_blank");
+        // Redirect in same tab to avoid popup blockers
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL received");
       }
     } catch (err) {
       console.error("Checkout error:", err);
@@ -35,7 +44,6 @@ const Pricing = () => {
         description: "Failed to start checkout. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setLoadingPlan(null);
     }
   };
