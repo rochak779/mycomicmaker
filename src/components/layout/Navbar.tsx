@@ -39,7 +39,7 @@ export const Navbar = () => {
               className="text-xl font-black text-comic-text hidden sm:block"
               style={{ textShadow: "2px 2px 0 hsl(var(--comic-yellow))" }}
             >
-              My Comic Maker
+              Your Comic Maker
             </span>
           </Link>
 

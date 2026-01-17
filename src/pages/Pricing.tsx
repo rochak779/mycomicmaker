@@ -1,13 +1,44 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, CreditCard, Zap, HelpCircle } from "lucide-react";
+import { Check, Sparkles, CreditCard, Zap, HelpCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Pricing = () => {
   const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const handleCheckout = async (productType: "credits" | "subscription") => {
+    if (!isAuthenticated) return;
+    
+    setLoadingPlan(productType);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { product_type: productType },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      toast({
+        title: "Checkout Error",
+        description: "Failed to start checkout. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
 
   const plans = [
     {
@@ -17,6 +48,7 @@ const Pricing = () => {
       description: "Perfect for trying out or occasional use",
       icon: CreditCard,
       color: "comic-blue",
+      productType: "credits" as const,
       features: [
         "5 comic generations",
         "Full 2-page comics (cover + 9 panels)",
@@ -34,6 +66,7 @@ const Pricing = () => {
       description: "Best value for comic enthusiasts",
       icon: Sparkles,
       color: "comic-yellow",
+      productType: "subscription" as const,
       features: [
         "Unlimited comic generations",
         "Full 2-page comics (cover + 9 panels)",
@@ -117,7 +150,7 @@ const Pricing = () => {
 
               <div className="text-center mb-6">
                 <div
-                  className={`w-16 h-16 bg-${plan.color}/20 rounded-full flex items-center justify-center mx-auto mb-4`}
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
                   style={{ backgroundColor: `hsl(var(--${plan.color}) / 0.2)` }}
                 >
                   <plan.icon 
@@ -145,13 +178,22 @@ const Pricing = () => {
 
               {isAuthenticated ? (
                 <Button
+                  onClick={() => handleCheckout(plan.productType)}
+                  disabled={loadingPlan !== null}
                   className={`w-full font-bold text-lg py-6 border-4 border-comic-text shadow-comic hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all ${
                     plan.popular
                       ? "bg-comic-yellow text-comic-text hover:bg-comic-yellow/90"
                       : "bg-primary text-primary-foreground"
                   }`}
                 >
-                  {plan.cta}
+                  {loadingPlan === plan.productType ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    plan.cta
+                  )}
                 </Button>
               ) : (
                 <Link to="/auth?mode=signup">
