@@ -23,11 +23,7 @@ const Index = () => {
 
       <main className="flex-1 relative z-10 container mx-auto px-4 py-8">
         {/* Header */}
-        <motion.header
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="text-center mb-12"
-        >
+        <motion.header initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center mb-12">
           <motion.div
             animate={{ rotate: [0, -2, 2, 0] }}
             transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
@@ -38,28 +34,27 @@ const Index = () => {
                 textShadow: "4px 4px 0 hsl(var(--comic-yellow)), 8px 8px 0 hsl(var(--comic-red))",
               }}
             >
-              🎨 COMIC CREATOR
+              🎨 My Comic Maker
             </h1>
           </motion.div>
           <p className="text-xl text-comic-text/70 font-medium max-w-xl mx-auto">
-            Turn your wildest ideas into hilarious 9-panel comic strips! Just describe your story and watch the magic happen.
+            Turn your wildest ideas into hilarious 9-panel comic strips! Just describe your story and watch the magic
+            happen.
           </p>
         </motion.header>
 
         {/* Main content */}
         <section className="relative">
-          {!comic && !isLoading && (
-            <StoryInput onSubmit={generateComic} isLoading={isLoading} />
-          )}
+          {!comic && !isLoading && <StoryInput onSubmit={generateComic} isLoading={isLoading} />}
 
           {isLoading && <LoadingAnimation currentStep={loadingStep} />}
 
           {comic && !isLoading && (
-            <ComicViewer 
-              title={comic.title} 
+            <ComicViewer
+              title={comic.title}
               coverImageUrl={comic.coverImageUrl}
-              panels={comic.panels} 
-              onReset={reset} 
+              panels={comic.panels}
+              onReset={reset}
             />
           )}
         </section>

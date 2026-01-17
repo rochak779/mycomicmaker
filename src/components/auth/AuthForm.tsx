@@ -46,7 +46,7 @@ export const AuthForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setLoading(true);
@@ -62,7 +62,7 @@ export const AuthForm = () => {
           }
           return;
         }
-        toast.success("Welcome to Comic Creator! 🎉");
+        toast.success("Welcome to My Comic Maker! 🎉");
         navigate("/");
       } else {
         const { error } = await signIn(email, password);
@@ -83,24 +83,18 @@ export const AuthForm = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-md mx-auto"
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md mx-auto">
       <div className="bg-card border-4 border-comic-text rounded-xl shadow-comic-lg p-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 
+          <h1
             className="text-3xl font-black text-comic-text mb-2"
             style={{ textShadow: "2px 2px 0 hsl(var(--comic-yellow))" }}
           >
             {isSignUp ? "Join the Fun! 🎉" : "Welcome Back! 🎨"}
           </h1>
           <p className="text-muted-foreground">
-            {isSignUp
-              ? "Create your account to start making comics"
-              : "Sign in to continue creating amazing comics"}
+            {isSignUp ? "Create your account to start making comics" : "Sign in to continue creating amazing comics"}
           </p>
         </div>
 
@@ -121,9 +115,7 @@ export const AuthForm = () => {
                 className={`pl-10 border-2 ${errors.email ? "border-destructive" : "border-comic-text"}`}
               />
             </div>
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
           </div>
 
           <div className="space-y-2">
@@ -148,9 +140,7 @@ export const AuthForm = () => {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password}</p>
-            )}
+            {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
           </div>
 
           <Button
@@ -158,13 +148,7 @@ export const AuthForm = () => {
             disabled={loading}
             className="w-full bg-primary text-primary-foreground font-bold text-lg py-6 border-4 border-comic-text shadow-comic hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
           >
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : isSignUp ? (
-              "Create Account"
-            ) : (
-              "Sign In"
-            )}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isSignUp ? "Create Account" : "Sign In"}
           </Button>
         </form>
 

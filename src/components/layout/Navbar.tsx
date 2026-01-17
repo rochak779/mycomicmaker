@@ -35,11 +35,11 @@ export const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <span className="text-2xl">🎨</span>
-            <span 
+            <span
               className="text-xl font-black text-comic-text hidden sm:block"
               style={{ textShadow: "2px 2px 0 hsl(var(--comic-yellow))" }}
             >
-              YOUR COMIC MAKER
+              My Comic Maker
             </span>
           </Link>
 
@@ -50,9 +50,7 @@ export const Navbar = () => {
                 key={link.href}
                 to={link.href}
                 className={`font-bold text-sm uppercase tracking-wide transition-colors ${
-                  isActiveLink(link.href)
-                    ? "text-primary"
-                    : "text-comic-text hover:text-primary"
+                  isActiveLink(link.href) ? "text-primary" : "text-comic-text hover:text-primary"
                 }`}
               >
                 {link.label}
@@ -76,16 +74,14 @@ export const Navbar = () => {
                   ) : (
                     <>
                       <CreditCard className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-bold text-comic-text">
-                        {profile?.credits ?? 0} credits
-                      </span>
+                      <span className="text-sm font-bold text-comic-text">{profile?.credits ?? 0} credits</span>
                     </>
                   )}
                 </div>
 
                 <Link to="/my-comics">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     className="border-2 border-comic-text font-bold hover:bg-primary hover:text-primary-foreground"
                   >
@@ -105,16 +101,12 @@ export const Navbar = () => {
             ) : (
               <>
                 <Link to="/auth">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="border-2 border-comic-text font-bold"
-                  >
+                  <Button variant="outline" size="sm" className="border-2 border-comic-text font-bold">
                     Login
                   </Button>
                 </Link>
                 <Link to="/auth?mode=signup">
-                  <Button 
+                  <Button
                     size="sm"
                     className="bg-primary text-primary-foreground font-bold border-2 border-comic-text shadow-comic hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all"
                   >
@@ -126,15 +118,8 @@ export const Navbar = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6 text-comic-text" />
-            ) : (
-              <Menu className="h-6 w-6 text-comic-text" />
-            )}
+          <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X className="h-6 w-6 text-comic-text" /> : <Menu className="h-6 w-6 text-comic-text" />}
           </button>
         </div>
 
@@ -153,15 +138,13 @@ export const Navbar = () => {
                   to={link.href}
                   onClick={() => setMobileMenuOpen(false)}
                   className={`font-bold text-sm uppercase tracking-wide py-2 ${
-                    isActiveLink(link.href)
-                      ? "text-primary"
-                      : "text-comic-text"
+                    isActiveLink(link.href) ? "text-primary" : "text-comic-text"
                   }`}
                 >
                   {link.label}
                 </Link>
               ))}
-              
+
               {isAuthenticated ? (
                 <>
                   <div className="flex items-center gap-2 py-2">
@@ -202,9 +185,7 @@ export const Navbar = () => {
                     </Button>
                   </Link>
                   <Link to="/auth?mode=signup" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-                    <Button className="w-full bg-primary font-bold border-2 border-comic-text">
-                      Sign Up
-                    </Button>
+                    <Button className="w-full bg-primary font-bold border-2 border-comic-text">Sign Up</Button>
                   </Link>
                 </div>
               )}

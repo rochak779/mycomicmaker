@@ -13,7 +13,7 @@ export const Footer = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🎨</span>
-            <span className="font-bold">Your Comic Maker</span>
+            <span className="font-bold">My Comic Maker</span>
           </div>
 
           <div className="flex items-center gap-6 text-sm">
@@ -28,9 +28,7 @@ export const Footer = () => {
             </Link>
           </div>
 
-          <p className="text-sm text-comic-cream/70">
-            Made with 💥 POW 💥 and AI magic
-          </p>
+          <p className="text-sm text-comic-cream/70">Made with 💥 POW 💥 and AI magic</p>
         </div>
       </div>
     </motion.footer>

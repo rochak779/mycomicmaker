@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Comic Creator Design System - All colors MUST be HSL. */
+/* My Comic Maker Design System - All colors MUST be HSL. */
 
 @layer base {
   :root {
@@ -92,7 +92,9 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
 }
 
