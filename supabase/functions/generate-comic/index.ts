@@ -19,6 +19,7 @@ serve(async (req) => {
     }
 
     console.log("Generating comic for story:", story, "Theme:", theme, "For:", recipient);
+    console.log("Character images provided:", characterImages?.length || 0);
 
     // Build context from inputs
     const themeMap: Record<string, string> = {
@@ -28,13 +29,84 @@ serve(async (req) => {
       "freestyle": "anything goes, pure comedy and creativity"
     };
     const themeContext = themeMap[theme as string] || "funny and entertaining";
-
     const recipientContext = recipient ? `This comic is specially made for ${recipient}. Include references or personalization for them.` : "";
-    const characterImageContext = characterImages && characterImages.length > 0 
-      ? `Reference images have been provided for the characters. Use these as visual inspiration for consistent character appearance.`
+
+    // Step 1: Convert uploaded character images to comic avatars
+    const comicAvatars: string[] = [];
+    
+    if (characterImages && characterImages.length > 0) {
+      console.log("Converting character images to comic avatars...");
+      
+      for (let i = 0; i < characterImages.length; i++) {
+        const imageUrl = characterImages[i];
+        console.log(`Converting image ${i + 1} to comic avatar...`);
+        
+        try {
+          const avatarResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash-image-preview",
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "text",
+                      text: "Transform this photo into a colorful comic book character avatar. Make it look like a cartoon/comic strip character with bold black outlines, exaggerated expressive features, and vibrant colors. Keep the key facial features and distinctive characteristics recognizable but stylize them in a fun newspaper comic strip art style. The result should look like a character from a Sunday newspaper comic or graphic novel - bold, simple, and expressive."
+                    },
+                    {
+                      type: "image_url",
+                      image_url: {
+                        url: imageUrl
+                      }
+                    }
+                  ]
+                }
+              ],
+              modalities: ["image", "text"]
+            })
+          });
+
+          if (avatarResponse.ok) {
+            const avatarData = await avatarResponse.json();
+            const avatarImageUrl = avatarData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+            
+            if (avatarImageUrl) {
+              comicAvatars.push(avatarImageUrl);
+              console.log(`Successfully created comic avatar ${i + 1}`);
+            } else {
+              console.error(`No avatar image in response for image ${i + 1}`);
+            }
+          } else {
+            const errorText = await avatarResponse.text();
+            console.error(`Failed to convert image ${i + 1} to avatar:`, avatarResponse.status, errorText);
+            
+            if (avatarResponse.status === 429) {
+              return new Response(
+                JSON.stringify({ error: "Rate limit exceeded while converting character images. Please try again." }),
+                { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+          }
+        } catch (avatarError) {
+          console.error(`Error converting image ${i + 1}:`, avatarError);
+        }
+      }
+      
+      console.log(`Created ${comicAvatars.length} comic avatars from ${characterImages.length} images`);
+    }
+
+    // Build character context for the story generation
+    const hasAvatars = comicAvatars.length > 0;
+    const characterContext = hasAvatars 
+      ? `Comic avatars have been created for ${comicAvatars.length} character(s). These will be used throughout the comic for consistent character appearance.`
       : "";
 
-    // Step 1: Expand story into 4 panels with dialogue
+    // Step 2: Expand story into 9 panels with dialogue
     const storyResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -50,7 +122,7 @@ serve(async (req) => {
 
 Theme: ${themeContext}
 ${recipientContext}
-${characterImageContext}
+${characterContext}
 
 You must create:
 1. A catchy comic TITLE
@@ -114,81 +186,115 @@ Respond in this exact JSON format:
     
     console.log("Generated comic script:", comicScript.title);
 
-    // Step 2: Generate cover image first
-    console.log("Generating cover image...");
-    const coverPrompt = `Cartoon comic cover art style, bright colors, bold outlines, dramatic composition, expressive characters. ${comicScript.coverDescription}. ${characterDescription ? `Character: ${characterDescription}` : ""} Style: Classic comic book cover, vibrant and eye-catching, suitable for a title page.`;
-    
-    const coverResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [{ role: "user", content: coverPrompt }],
-        modalities: ["image", "text"]
-      }),
-    });
+    // Helper function to generate an image with optional avatar reference
+    async function generateImageWithAvatar(prompt: string, avatarUrl?: string): Promise<string> {
+      let response;
+      
+      if (avatarUrl) {
+        // Use image editing to incorporate the avatar
+        response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-image-preview",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: prompt
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: avatarUrl
+                    }
+                  }
+                ]
+              }
+            ],
+            modalities: ["image", "text"]
+          })
+        });
+      } else {
+        // Generate without avatar reference
+        response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-image-preview",
+            messages: [{ role: "user", content: prompt }],
+            modalities: ["image", "text"]
+          })
+        });
+      }
 
-    let coverImageUrl = "";
-    if (coverResponse.ok) {
-      const coverData = await coverResponse.json();
-      coverImageUrl = coverData.choices?.[0]?.message?.images?.[0]?.image_url?.url || "";
-      console.log("Cover image generated successfully");
-    } else {
-      console.error("Cover image generation failed:", await coverResponse.text());
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Image generation error:", response.status, errorText);
+        
+        if (response.status === 429) {
+          throw new Error("RATE_LIMIT");
+        }
+        return "";
+      }
+
+      const data = await response.json();
+      return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || "";
     }
 
-    // Step 3: Generate images for each panel
+    // Step 3: Generate cover image (with avatar if available)
+    console.log("Generating cover image...");
+    const primaryAvatar = comicAvatars.length > 0 ? comicAvatars[0] : undefined;
+    
+    const coverPrompt = hasAvatars
+      ? `Create a comic book cover featuring this character in the following scene: ${comicScript.coverDescription}. Style: Classic comic book cover with bold outlines, vibrant colors, dramatic composition. Keep the character's appearance consistent with the provided avatar.`
+      : `Cartoon comic cover art style, bright colors, bold outlines, dramatic composition, expressive characters. ${comicScript.coverDescription}. ${characterDescription ? `Character: ${characterDescription}` : ""} Style: Classic comic book cover, vibrant and eye-catching.`;
+    
+    let coverImageUrl = "";
+    try {
+      coverImageUrl = await generateImageWithAvatar(coverPrompt, primaryAvatar);
+      console.log("Cover image generated successfully");
+    } catch (error) {
+      if (error instanceof Error && error.message === "RATE_LIMIT") {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded during cover generation. Please try again." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      console.error("Cover image generation failed:", error);
+    }
+
+    // Step 4: Generate images for each panel (with avatar for character consistency)
     const panelImages: string[] = [];
     
     for (let i = 0; i < comicScript.panels.length; i++) {
       const panel = comicScript.panels[i];
       console.log(`Generating image for panel ${i + 1}...`);
       
-      const imagePrompt = `Cartoon comic panel style, bright colors, bold outlines, expressive characters, funny exaggerated expressions. ${panel.visualDescription}. ${characterDescription ? `Character: ${characterDescription}` : ""} Style: Classic newspaper comic strip, halftone dots effect, vibrant and whimsical.`;
+      const panelPrompt = hasAvatars
+        ? `Create a comic panel featuring this character in the following scene: ${panel.visualDescription}. Style: Classic newspaper comic strip with bold black outlines, vibrant colors, expressive characters. Keep the character's appearance consistent with the provided avatar.`
+        : `Cartoon comic panel style, bright colors, bold outlines, expressive characters, funny exaggerated expressions. ${panel.visualDescription}. ${characterDescription ? `Character: ${characterDescription}` : ""} Style: Classic newspaper comic strip, halftone dots effect.`;
       
-      const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image-preview",
-          messages: [
-            {
-              role: "user",
-              content: imagePrompt
-            }
-          ],
-          modalities: ["image", "text"]
-        }),
-      });
-
-      if (!imageResponse.ok) {
-        const errorText = await imageResponse.text();
-        console.error(`Image generation error for panel ${i + 1}:`, imageResponse.status, errorText);
-        
-        if (imageResponse.status === 429) {
+      try {
+        const imageUrl = await generateImageWithAvatar(panelPrompt, primaryAvatar);
+        panelImages.push(imageUrl);
+        console.log(`Panel ${i + 1} image generated successfully`);
+      } catch (error) {
+        if (error instanceof Error && error.message === "RATE_LIMIT") {
           return new Response(
-            JSON.stringify({ error: "Rate limit exceeded during image generation. Please try again." }),
+            JSON.stringify({ error: "Rate limit exceeded during panel generation. Please try again." }),
             { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        throw new Error(`Image generation failed for panel ${i + 1}`);
-      }
-
-      const imageData = await imageResponse.json();
-      const imageUrl = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      
-      if (imageUrl) {
-        panelImages.push(imageUrl);
-        console.log(`Panel ${i + 1} image generated successfully`);
-      } else {
-        console.error(`No image URL in response for panel ${i + 1}`);
-        // Use a placeholder for failed images
+        console.error(`Panel ${i + 1} generation failed:`, error);
         panelImages.push("");
       }
     }
