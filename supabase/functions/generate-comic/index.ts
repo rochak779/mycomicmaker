@@ -1,9 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Valid themes for validation
+const VALID_THEMES = ["love-story", "birthday", "friends-family", "freestyle"];
+
+// Input validation limits
+const MAX_STORY_LENGTH = 2000;
+const MAX_CHARACTER_DESCRIPTION_LENGTH = 500;
+const MAX_RECIPIENT_LENGTH = 100;
+const MAX_CHARACTER_IMAGES = 4;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,14 +21,161 @@ serve(async (req) => {
   }
 
   try {
+    // Step 1: Verify authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error("Authentication failed:", authError?.message);
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Authenticated user:", user.id);
+
+    // Step 2: Verify user has credits or active subscription
+    const { data: profile, error: profileError } = await supabaseClient
+      .from("profiles")
+      .select("credits, subscription_status")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error("Failed to fetch profile:", profileError?.message);
+      return new Response(
+        JSON.stringify({ error: "User profile not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const hasActiveSubscription = profile.subscription_status === "active";
+    const hasCredits = profile.credits > 0;
+
+    if (!hasActiveSubscription && !hasCredits) {
+      console.log("User has no credits or active subscription");
+      return new Response(
+        JSON.stringify({ error: "Insufficient credits. Please purchase more credits or subscribe." }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Step 3: Parse and validate input
     const { story, characterDescription, theme, recipient, characterImages } = await req.json();
+
+    // Validate required fields
+    if (!story || typeof story !== "string") {
+      return new Response(
+        JSON.stringify({ error: "Story is required and must be a string" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (story.trim().length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Story cannot be empty" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (story.length > MAX_STORY_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Story must be under ${MAX_STORY_LENGTH} characters` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate theme
+    if (!theme || typeof theme !== "string" || !VALID_THEMES.includes(theme)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid theme. Must be one of: ${VALID_THEMES.join(", ")}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate optional fields
+    if (characterDescription !== undefined && characterDescription !== null) {
+      if (typeof characterDescription !== "string") {
+        return new Response(
+          JSON.stringify({ error: "Character description must be a string" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (characterDescription.length > MAX_CHARACTER_DESCRIPTION_LENGTH) {
+        return new Response(
+          JSON.stringify({ error: `Character description must be under ${MAX_CHARACTER_DESCRIPTION_LENGTH} characters` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    if (recipient !== undefined && recipient !== null) {
+      if (typeof recipient !== "string") {
+        return new Response(
+          JSON.stringify({ error: "Recipient must be a string" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (recipient.length > MAX_RECIPIENT_LENGTH) {
+        return new Response(
+          JSON.stringify({ error: `Recipient name must be under ${MAX_RECIPIENT_LENGTH} characters` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    if (characterImages !== undefined && characterImages !== null) {
+      if (!Array.isArray(characterImages)) {
+        return new Response(
+          JSON.stringify({ error: "Character images must be an array" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (characterImages.length > MAX_CHARACTER_IMAGES) {
+        return new Response(
+          JSON.stringify({ error: `Maximum ${MAX_CHARACTER_IMAGES} character images allowed` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      // Validate each image is a string (base64 or URL)
+      for (const img of characterImages) {
+        if (typeof img !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Each character image must be a string" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating comic for story:", story, "Theme:", theme, "For:", recipient);
+    // Sanitize inputs for use in prompts (escape any potential injection patterns)
+    const sanitizedStory = story.trim().slice(0, MAX_STORY_LENGTH);
+    const sanitizedCharacterDescription = characterDescription?.trim().slice(0, MAX_CHARACTER_DESCRIPTION_LENGTH) || "";
+    const sanitizedRecipient = recipient?.trim().slice(0, MAX_RECIPIENT_LENGTH) || "";
+
+    console.log("Generating comic for story:", sanitizedStory.substring(0, 100) + "...", "Theme:", theme, "For:", sanitizedRecipient || "N/A");
     console.log("Character images provided:", characterImages?.length || 0);
 
     // Build context from inputs
@@ -29,9 +186,9 @@ serve(async (req) => {
       "freestyle": "anything goes, pure comedy and creativity"
     };
     const themeContext = themeMap[theme as string] || "funny and entertaining";
-    const recipientContext = recipient ? `This comic is specially made for ${recipient}. Include references or personalization for them.` : "";
+    const recipientContext = sanitizedRecipient ? `This comic is specially made for ${sanitizedRecipient}. Include references or personalization for them.` : "";
 
-    // Step 1: Convert uploaded character images to comic avatars
+    // Step 4: Convert uploaded character images to comic avatars
     const comicAvatars: string[] = [];
     
     if (characterImages && characterImages.length > 0) {
@@ -106,7 +263,7 @@ serve(async (req) => {
       ? `Comic avatars have been created for ${comicAvatars.length} character(s). These will be used throughout the comic for consistent character appearance.`
       : "";
 
-    // Step 2: Expand story into 9 panels with dialogue
+    // Step 5: Expand story into 9 panels with dialogue
     const storyResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -136,7 +293,7 @@ For each panel, provide:
 
 Make it FUNNY! Use visual gags, exaggerated expressions, unexpected twists, and punchy dialogue. Build up the story across all 9 panels with a satisfying punchline at the end.
 
-${characterDescription ? `Main character description: ${characterDescription}` : ""}
+${sanitizedCharacterDescription ? `Main character description: ${sanitizedCharacterDescription}` : ""}
 
 Respond in this exact JSON format:
 {
@@ -155,7 +312,7 @@ Respond in this exact JSON format:
           },
           {
             role: "user",
-            content: `Create a 9-panel funny comic based on this story: "${story}"`
+            content: `Create a 9-panel funny comic based on this story: "${sanitizedStory}"`
           }
         ],
         response_format: { type: "json_object" }
@@ -250,13 +407,13 @@ Respond in this exact JSON format:
       return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || "";
     }
 
-    // Step 3: Generate cover image (with avatar if available)
+    // Step 6: Generate cover image (with avatar if available)
     console.log("Generating cover image...");
     const primaryAvatar = comicAvatars.length > 0 ? comicAvatars[0] : undefined;
     
     const coverPrompt = hasAvatars
       ? `Create a comic book cover featuring this character in the following scene: ${comicScript.coverDescription}. Style: Classic comic book cover with bold outlines, vibrant colors, dramatic composition. Keep the character's appearance consistent with the provided avatar.`
-      : `Cartoon comic cover art style, bright colors, bold outlines, dramatic composition, expressive characters. ${comicScript.coverDescription}. ${characterDescription ? `Character: ${characterDescription}` : ""} Style: Classic comic book cover, vibrant and eye-catching.`;
+      : `Cartoon comic cover art style, bright colors, bold outlines, dramatic composition, expressive characters. ${comicScript.coverDescription}. ${sanitizedCharacterDescription ? `Character: ${sanitizedCharacterDescription}` : ""} Style: Classic comic book cover, vibrant and eye-catching.`;
     
     let coverImageUrl = "";
     try {
@@ -272,7 +429,7 @@ Respond in this exact JSON format:
       console.error("Cover image generation failed:", error);
     }
 
-    // Step 4: Generate images for each panel (with avatar for character consistency)
+    // Step 7: Generate images for each panel (with avatar for character consistency)
     const panelImages: string[] = [];
     
     for (let i = 0; i < comicScript.panels.length; i++) {
@@ -281,7 +438,7 @@ Respond in this exact JSON format:
       
       const panelPrompt = hasAvatars
         ? `Create a comic panel featuring this character in the following scene: ${panel.visualDescription}. Style: Classic newspaper comic strip with bold black outlines, vibrant colors, expressive characters. Keep the character's appearance consistent with the provided avatar.`
-        : `Cartoon comic panel style, bright colors, bold outlines, expressive characters, funny exaggerated expressions. ${panel.visualDescription}. ${characterDescription ? `Character: ${characterDescription}` : ""} Style: Classic newspaper comic strip, halftone dots effect.`;
+        : `Cartoon comic panel style, bright colors, bold outlines, expressive characters, funny exaggerated expressions. ${panel.visualDescription}. ${sanitizedCharacterDescription ? `Character: ${sanitizedCharacterDescription}` : ""} Style: Classic newspaper comic strip, halftone dots effect.`;
       
       try {
         const imageUrl = await generateImageWithAvatar(panelPrompt, primaryAvatar);
@@ -309,6 +466,31 @@ Respond in this exact JSON format:
     };
 
     console.log("Comic generation complete!");
+
+    // Step 8: Deduct credits if user doesn't have active subscription
+    if (!hasActiveSubscription) {
+      const { error: updateError } = await supabaseClient
+        .from("profiles")
+        .update({ credits: profile.credits - 1 })
+        .eq("id", user.id);
+
+      if (updateError) {
+        console.error("Failed to deduct credits:", updateError.message);
+        // Don't fail the request, but log the error
+      } else {
+        console.log("Deducted 1 credit from user:", user.id, "Remaining:", profile.credits - 1);
+
+        // Record the transaction
+        await supabaseClient
+          .from("credit_transactions")
+          .insert({
+            user_id: user.id,
+            amount: -1,
+            type: "usage",
+            description: `Comic generation: ${comicScript.title}`
+          });
+      }
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
