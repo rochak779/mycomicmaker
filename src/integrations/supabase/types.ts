@@ -195,6 +195,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      reserve_credit_for_generation: {
+        Args: { p_user_id: string }
+        Returns: {
+          has_subscription: boolean
+          remaining_credits: number
+          success: boolean
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

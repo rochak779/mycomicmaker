@@ -81,31 +81,30 @@ serve(async (req) => {
 
     console.log(`User authenticated: user_id=${user.id}`);
 
-    // Step 2: Verify user has credits or active subscription
-    const { data: profile, error: profileError } = await supabaseClient
-      .from("profiles")
-      .select("credits, subscription_status")
-      .eq("id", user.id)
-      .single();
+    // Step 2: Atomically reserve credit (prevents race conditions)
+    // This function checks subscription status, credits, and deducts if needed - all in one atomic operation
+    const { data: creditResult, error: creditError } = await supabaseClient
+      .rpc("reserve_credit_for_generation", { p_user_id: user.id });
 
-    if (profileError || !profile) {
-      console.error("Failed to fetch profile:", profileError?.message);
+    if (creditError) {
+      console.error("Credit reservation error:", creditError.message);
       return new Response(
-        JSON.stringify({ error: "User profile not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Failed to verify credits" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const hasActiveSubscription = profile.subscription_status === "active";
-    const hasCredits = profile.credits > 0;
-
-    if (!hasActiveSubscription && !hasCredits) {
-      console.log("User has no credits or active subscription");
+    const reservationResult = creditResult?.[0];
+    if (!reservationResult?.success) {
+      console.log(`User has no credits or active subscription: user_id=${user.id}`);
       return new Response(
         JSON.stringify({ error: "Insufficient credits. Please purchase more credits or subscribe." }),
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const hasActiveSubscription = reservationResult.has_subscription;
+    console.log(`Credit reserved: user_id=${user.id}, has_subscription=${hasActiveSubscription}, remaining_credits=${reservationResult.remaining_credits}`);
 
     // Step 3: Parse and validate input
     const { story, characterDescription, theme, recipient, characterImages } = await req.json();
@@ -498,30 +497,8 @@ Respond in this exact JSON format:
 
     console.log("Comic generation complete!");
 
-    // Step 8: Deduct credits if user doesn't have active subscription
-    if (!hasActiveSubscription) {
-      const { error: updateError } = await supabaseClient
-        .from("profiles")
-        .update({ credits: profile.credits - 1 })
-        .eq("id", user.id);
-
-      if (updateError) {
-        console.error("Failed to deduct credits:", updateError.message);
-        // Don't fail the request, but log the error
-      } else {
-        console.log("Deducted 1 credit from user:", user.id, "Remaining:", profile.credits - 1);
-
-        // Record the transaction
-        await supabaseClient
-          .from("credit_transactions")
-          .insert({
-            user_id: user.id,
-            amount: -1,
-            type: "generation",
-            description: "Comic generation"
-          });
-      }
-    }
+    // Note: Credits were already deducted atomically at the start of the request
+    // via the reserve_credit_for_generation database function
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
