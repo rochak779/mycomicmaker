@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Panel {
   panelNumber: number;
@@ -31,6 +32,15 @@ export const useComicGenerator = () => {
     setLoadingStep(0);
     setComic(null);
 
+    // Get user session token for authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      toast.error("Authentication required. Please sign in to generate comics.");
+      setIsLoading(false);
+      return;
+    }
+
     // Simulate step progression for better UX
     const stepInterval = setInterval(() => {
       setLoadingStep((prev) => Math.min(prev + 1, 5));
@@ -43,7 +53,7 @@ export const useComicGenerator = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({ story, characterDescription, theme, recipient, characterImages }),
         }
@@ -52,12 +62,16 @@ export const useComicGenerator = () => {
       if (!response.ok) {
         const errorData = await response.json();
         
-        if (response.status === 429) {
-          toast.error("Rate limit exceeded. Please wait a moment and try again.");
+        if (response.status === 401) {
+          toast.error("Session expired. Please sign in again.");
           return;
         }
         if (response.status === 402) {
-          toast.error("AI credits exhausted. Please add more credits to continue.");
+          toast.error("Insufficient credits. Please purchase more credits or subscribe.");
+          return;
+        }
+        if (response.status === 429) {
+          toast.error("Rate limit exceeded. Please wait a moment and try again.");
           return;
         }
         
