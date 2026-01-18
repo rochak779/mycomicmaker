@@ -64,7 +64,30 @@ serve(async (req) => {
     }
 
     const productType = session.metadata?.product_type;
-    logStep("Processing payment", { productType });
+    const paymentIntentId = session.payment_intent as string;
+    logStep("Processing payment", { productType, paymentIntentId });
+
+    // CRITICAL: Check if this payment was already processed (idempotency check)
+    // This prevents replay attacks and race conditions
+    if (paymentIntentId) {
+      const { data: existingTx } = await supabaseClient
+        .from("credit_transactions")
+        .select("id")
+        .eq("stripe_payment_id", paymentIntentId)
+        .maybeSingle();
+
+      if (existingTx) {
+        logStep("Payment already processed", { paymentIntentId });
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: "Payment already processed",
+          already_processed: true
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+    }
 
     if (productType === "credits") {
       // Add 5 credits
@@ -81,19 +104,62 @@ serve(async (req) => {
         .update({ credits: newCredits })
         .eq("id", user.id);
 
-      // Log transaction
-      await supabaseClient
+      // Log transaction with unique stripe_payment_id (database constraint prevents duplicates)
+      const { error: txError } = await supabaseClient
         .from("credit_transactions")
         .insert({
           user_id: user.id,
           amount: 5,
           type: "purchase",
           description: "Purchased 5 credit pack",
-          stripe_payment_id: session.payment_intent as string,
+          stripe_payment_id: paymentIntentId,
         });
+
+      // Handle race condition: if insert fails due to unique constraint, payment was already processed
+      if (txError) {
+        if (txError.code === "23505") { // Unique violation
+          logStep("Duplicate payment detected via constraint", { paymentIntentId });
+          return new Response(JSON.stringify({ 
+            success: true, 
+            message: "Payment already processed",
+            already_processed: true
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+        throw new Error(`Failed to log transaction: ${txError.message}`);
+      }
 
       logStep("Credits added", { newCredits });
     } else if (productType === "subscription") {
+      // For subscriptions, create a tracking transaction to prevent replay attacks
+      const { error: txError } = await supabaseClient
+        .from("credit_transactions")
+        .insert({
+          user_id: user.id,
+          amount: 0,
+          type: "subscription",
+          description: "Subscription activated",
+          stripe_payment_id: paymentIntentId,
+        });
+
+      // Handle race condition for subscription activation
+      if (txError) {
+        if (txError.code === "23505") { // Unique violation
+          logStep("Duplicate subscription activation detected", { paymentIntentId });
+          return new Response(JSON.stringify({ 
+            success: true, 
+            message: "Subscription already activated",
+            already_processed: true
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+        throw new Error(`Failed to log subscription: ${txError.message}`);
+      }
+
       // Update subscription status
       await supabaseClient
         .from("profiles")
