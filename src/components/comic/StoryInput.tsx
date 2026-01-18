@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { Sparkles, Wand2, Upload, X, Heart, Cake, Users, Pencil } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface StoryInputProps {
   onSubmit: (story: string, characterDescription: string, theme: string, recipient: string, characterImages: string[]) => void;
@@ -30,9 +32,19 @@ export const StoryInput = ({ onSubmit, isLoading }: StoryInputProps) => {
   const [theme, setTheme] = useState("");
   const [recipient, setRecipient] = useState("");
   const [characterImages, setCharacterImages] = useState<string[]>([]);
+  
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Redirect to login if not authenticated
+    if (!isAuthenticated) {
+      navigate("/auth");
+      return;
+    }
+    
     if (story.trim() && theme) {
       onSubmit(story, characterDescription, theme, recipient, characterImages);
     }
