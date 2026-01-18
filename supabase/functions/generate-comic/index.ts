@@ -15,6 +15,28 @@ const MAX_CHARACTER_DESCRIPTION_LENGTH = 500;
 const MAX_RECIPIENT_LENGTH = 100;
 const MAX_CHARACTER_IMAGES = 4;
 
+// Rate limiting configuration
+const RATE_LIMIT_MAX_REQUESTS = 10; // Max requests per window
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute window
+const rateLimits = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const limit = rateLimits.get(userId);
+  
+  if (!limit || now > limit.resetAt) {
+    rateLimits.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  
+  if (limit.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return false;
+  }
+  
+  limit.count++;
+  return true;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -48,7 +70,16 @@ serve(async (req) => {
       );
     }
 
-    console.log("Authenticated user:", user.id);
+    // Check rate limit for this user
+    if (!checkRateLimit(user.id)) {
+      console.log(`Rate limit exceeded for user: ${user.id}`);
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please wait before generating another comic." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`User authenticated: user_id=${user.id}`);
 
     // Step 2: Verify user has credits or active subscription
     const { data: profile, error: profileError } = await supabaseClient
@@ -175,8 +206,8 @@ serve(async (req) => {
     const sanitizedCharacterDescription = characterDescription?.trim().slice(0, MAX_CHARACTER_DESCRIPTION_LENGTH) || "";
     const sanitizedRecipient = recipient?.trim().slice(0, MAX_RECIPIENT_LENGTH) || "";
 
-    console.log("Generating comic for story:", sanitizedStory.substring(0, 100) + "...", "Theme:", theme, "For:", sanitizedRecipient || "N/A");
-    console.log("Character images provided:", characterImages?.length || 0);
+    // Log only non-sensitive metadata (no PII, no story content)
+    console.log(`Generating comic: user_id=${user.id}, theme=${theme}, has_recipient=${!!recipient}, story_length=${story.length}, character_images=${characterImages?.length || 0}`);
 
     // Build context from inputs
     const themeMap: Record<string, string> = {
@@ -486,8 +517,8 @@ Respond in this exact JSON format:
           .insert({
             user_id: user.id,
             amount: -1,
-            type: "usage",
-            description: `Comic generation: ${comicScript.title}`
+            type: "generation",
+            description: "Comic generation"
           });
       }
     }
