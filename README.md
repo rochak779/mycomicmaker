@@ -52,13 +52,12 @@ Perfect for creators, kids, educators, gifts, and anyone who wants to see themse
 
 ---
 
-## 🛠️ Tech Stack (Example – customize as needed)
+## 🛠️ Built with
 
-* **Frontend:** React / Next.js
-* **Backend:** Node.js
-* **AI:** Image & text generation models
-* **Storage:** Cloud storage for uploads
-* **Auth:** Email
+* **Frontend:** React, TypeScript, Vite, and Tailwind CSS
+* **Backend:** Supabase Edge Functions and Postgres
+* **AI:** Gemini text and image models through the Lovable AI gateway
+* **Data and auth:** Supabase Postgres and email authentication
 
 ---
 
