@@ -1,80 +1,26 @@
-# 🎨 My Comic Maker
+# My Comic Maker
 
-**My Comic Maker** is an AI-powered comic creation app that turns **your stories and characters** into full comics — instantly. Upload your photos, write a story (or any idea), choose a style, and let AI generate personalised comic panels.
+**Turn a story and a few photos into a personalised 9-panel comic strip, with the same characters looking the same in every panel.**
 
-> ✨ *Your story. Your characters. Instantly a comic.*
+[Try it →](https://mycomicmaker.lovable.app)
 
----
+![My Comic Maker home page](docs/readme/screenshot.png)
 
-## 🚀 What is My Comic Maker?
+## The problem
 
-My Comic Maker makes comic creation accessible to everyone — no drawing or design skills required.
+A personalised comic, starring your kids, your friends or yourself, makes a great story or gift, but drawing one takes skill and hours. AI image tools can produce a single picture, but they struggle to keep a character looking like the same person from one panel to the next, which is what makes a comic read as a story.
 
-You can:
+## What it does
 
-* Turn **any story, prompt, or idea** into a comic
-* Upload **your own photos** to create custom characters
-* Keep characters **consistent across panels**
-* Generate comics in different **styles and layouts**
+- **Pick an occasion:** a love story, a birthday, friends and family, or freestyle.
+- **Say who it's for and describe the story** in a sentence or two.
+- **Upload up to 4 photos to create characters,** or describe them in words. They keep a consistent look across all nine panels.
+- **Generate the strip,** then download or share it. A public gallery shows examples.
+- **Paid plans** through Stripe checkout and subscriptions.
 
-Perfect for creators, kids, educators, gifts, and anyone who wants to see themselves in a comic.
+<details>
+<summary><strong>Tech stack</strong></summary>
 
----
+React, TypeScript, Vite, Tailwind CSS, Supabase (Postgres, email sign-in, Edge Functions), Google Gemini text and image models, Stripe.
 
-## ✨ Features
-
-* 🧠 **AI Comic Generation** – Generate full comic panels from text
-* 📸 **Custom Characters** – Upload photos to create personalized characters
-* 🎭 **Character Consistency** – Same character look across panels
-* 🎨 **Multiple Styles** – Choose comic styles and themes
-* ⚡ **Fast & Easy** – From idea to comic in minutes
-* 🧒 **Kid-Friendly** – Great for stories, fun, and learning
-
----
-
-## 🖼️ How It Works
-
-1. ✍️ Write your story or idea
-2. 📸 Upload photos to create characters (optional)
-3. 🎨 Choose a comic style
-4. 🤖 Generate your comic instantly
-5. 📥 Download or share your comic
-
----
-
-## 🧩 Use Cases
-
-* 📚 Kids stories & bedtime comics
-* 🎁 Personalized comic gifts
-* ✍️ Storytelling & writing inspiration
-* 📱 Social media content
-* 🏫 Educational storytelling
-
----
-
-## 🛠️ Built with
-
-* **Frontend:** React, TypeScript, Vite, and Tailwind CSS
-* **Backend:** Supabase Edge Functions and Postgres
-* **AI:** Gemini text and image models through the Lovable AI gateway
-* **Data and auth:** Supabase Postgres and email authentication
-
----
-
-## 🌐 Live Demo
-
-👉 **Try it here:** https://www.mycomicmaker.com/
-
----
-
-## 🧑‍💻 Author
-
-Built by an indie maker who loves creating creative AI tools.
-
-If you like this project, consider supporting it.
-
----
-
-## ⭐ Support
-
-If you find My Comic Maker useful, please ⭐ the repo — it really helps!
+</details>
