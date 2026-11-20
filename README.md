@@ -24,3 +24,7 @@ A personalised comic, starring your kids, your friends or yourself, makes a grea
 React, TypeScript, Vite, Tailwind CSS, Supabase (Postgres, email sign-in, Edge Functions), Google Gemini text and image models, Stripe.
 
 </details>
+
+---
+
+Built by [Rochak Agarwal](https://www.rochakagarwal.com). More of my work is at [rochakagarwal.com](https://www.rochakagarwal.com).
